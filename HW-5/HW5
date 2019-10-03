@@ -1,0 +1,112 @@
+-- Практическое задание по теме “Операторы, фильтрация, сортировка и ограничение”
+
+DROP DATABASE IF EXISTS SHOP;
+CREATE DATABASE SHOP;
+USE SHOP;
+
+
+CREATE TABLE users (id SERIAL PRIMARY KEY,    -- Создаем таблицу и заполняем данными 
+                    name varchar(225),
+                    birthday_at date,
+                    created_at VARCHAR(20) ,
+                    updated_at VARCHAR(20) );
+
+                   
+                   
+INSERT INTO `users` (`id`, `name`, `birthday_at`, `created_at`, `updated_at`) VALUES ('1', 'aut', '1994-06-18', NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `birthday_at`, `created_at`, `updated_at`) VALUES ('2', 'eos', '1978-08-20', NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `birthday_at`, `created_at`, `updated_at`) VALUES ('3', 'sed', '1999-04-17', NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `birthday_at`, `created_at`, `updated_at`) VALUES ('4', 'recusandae', '1984-09-22', NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `birthday_at`, `created_at`, `updated_at`) VALUES ('5', 'earum', '1979-07-10', NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `birthday_at`, `created_at`, `updated_at`) VALUES ('6', 'sunt', '1976-09-06', NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `birthday_at`, `created_at`, `updated_at`) VALUES ('7', 'consectetur', '1990-03-31', NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `birthday_at`, `created_at`, `updated_at`) VALUES ('8', 'et', '2004-02-05', NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `birthday_at`, `created_at`, `updated_at`) VALUES ('9', 'rerum', '1972-05-01', NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `birthday_at`, `created_at`, `updated_at`) VALUES ('10', 'recusandae', '1992-04-29', NULL, NULL);   
+
+
+SELECT * from users;
+
+
+-- 1. Пусть в таблице users поля created_at и updated_at оказались незаполненными. Заполните их текущими датой и временем.
+
+Update 
+	users
+set 
+	created_at = now(),
+    updated_at = now();
+   
+   
+   
+-- 2. Таблица users была неудачно спроектирована. Записи created_at и updated_at были заданы типом VARCHAR и в них долгое время помещались значения в формате "20.10.2017 8:10". 
+-- Необходимо преобразовать поля к типу DATETIME, сохранив введеные ранее значения
+
+ ALTER TABLE users MODIFY created_at DATETIME;  
+ ALTER TABLE users MODIFY updated_at DATETIME;
+ 
+-- 3. В таблице складских запасов storehouses_products в поле value могут встречаться самые разные цифры: 0, если товар закончился и выше нуля, если на складе имеются запасы. 
+-- Необходимо отсортировать записи таким образом, чтобы они выводились в порядке увеличения значения value. Однако, нулевые запасы должны выводиться в конце, после всех записей
+
+CREATE TABLE storehouses_products (id SERIAL PRIMARY KEY,
+                    product varchar(225),
+                    value int);
+                    
+INSERT INTO storehouses_products  (product, value) 
+VALUES
+('iPhone 8',  3),
+('P20 Lite',  0),
+('Galaxy S8', 20),
+('LG ONE',    15),
+('D600',      0),
+('Nokia 3310',3),
+('Sony P9',   20),
+('ERIKSSON BP',35),
+('BlackBerry',  0);
+
+ALTER TABLE storehouses_products ADD Status int;  -- Добавляем колонку по которой будем дополнительно сортироваться, чтобы нули выводить в конце..
+
+Update storehouses_products set Status = 1 WHERE value > 0;  -- Заполняем новую колонку значениями..
+Update storehouses_products set Status = 0 WHERE value = 0;
+
+select * from storehouses_products order by Status Desc, value;
+
+
+-- 4. (по желанию) Из таблицы users необходимо извлечь пользователей, родившихся в августе и мае. Месяцы заданы в виде списка английских названий ('may', 'august')
+ 
+SELECT 
+	name, 
+ IF 
+    (MONTH(birthday_at) = 5,'May','August') as Month_Birthday
+ FROM 
+    users 
+ WHERE 
+   MONTH(birthday_at) = 5 or MONTH(birthday_at) = 8;
+
+  
+  
+  
+  -- Практическое задание теме “Агрегация данных” 
+  
+-- 1. Подсчитайте средний возраст пользователей в таблице users
+
+  ALTER TABLE users ADD Age int;
+ Update users set Age = (TO_DAYS(NOW())- TO_DAYS(birthday_at)) / 365.25;
+
+
+SELECT AVG(Age) as 'Average_Age' from users;
+
+-- 2. Подсчитайте количество дней рождения, которые приходятся на каждый из дней недели. 
+-- Следует учесть, что необходимы дни недели текущего года, а не года рождения.
+ 
+ALTER TABLE users ADD Day_Birthday Date;  --  Добавляем колонку для пересчета
+
+ALTER TABLE users ADD Day_Birthday_this_year int;  --  Добавляем колонку для вывода дня недели
+
+Update users set Day_Birthday = DATE_ADD(birthday_at, INTERVAL age YEAR); -- приводим даты ДР к текущему году
+
+Update users set Day_Birthday_this_year = DAYOFWEEK(Day_Birthday);  -- Получаем номер дня недели
+ 
+select Day_Birthday_this_year, count(*) from users group by Day_Birthday_this_year; -- Выводим результат
+
+
+
