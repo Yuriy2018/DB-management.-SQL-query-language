@@ -1,0 +1,89 @@
+use shop;
+
+/*
+ Практическое задание по теме “Транзакции, переменные, представления”
+
+1. В базе данных shop и sample присутствуют одни и те же таблицы, учебной базы данных.
+ Переместите запись id = 1 из таблицы shop.users в таблицу sample.users. Используйте транзакции.
+*/
+
+START TRANSACTION;
+
+INSERT INTO sample.users SELECT * FROM shop.users WHERE id = 1;
+
+DELETE FROM shop.users WHERE id = 1 LIMIT 1;
+
+COMMIT;
+
+
+-- 2. Создайте представление, которое выводит название name товарной позиции из таблицы products и
+-- соответствующее название каталога name из таблицы catalogs.
+
+CREATE VIEW info_products as
+SELECT p.name as 'name', c.name as 'catalog' from  products  p left JOIN catalogs c on c.id = p.id; 
+
+
+
+
+/*   Практическое задание по теме “Администрирование MySQL” 
+ 
+ 1. Создайте двух пользователей которые имеют доступ к базе данных shop. 
+Первому пользователю shop_read должны быть доступны только запросы на чтение данных, 
+второму пользователю shop — любые операции в пределах базы данных shop. */
+
+
+
+CREATE user 'shop_read'@'localhost' IDENTIFIED BY '123';
+GRANT SELECT, SHOW VIEW on shop.* TO 'User_read'@'localhost' IDENTIFIED BY '123';
+
+CREATE user 'shop'@'localhost' IDENTIFIED BY '777';
+GRANT all on shop.* TO 'shop_read'@'localhost' IDENTIFIED BY '777';
+
+/*
+ Практическое задание по теме “Хранимые процедуры и функции, триггеры"
+
+1. Создайте хранимую функцию hello(), которая будет возвращать приветствие, 
+в зависимости от текущего времени суток. С 6:00 до 12:00 функция должна возвращать фразу "Доброе утро",
+ с 12:00 до 18:00 функция должна возвращать фразу "Добрый день", с 18:00 до 00:00 — "Добрый вечер", 
+ с 00:00 до 6:00 — "Доброй ночи"
+*/
+
+Delimiter //
+DROP FUNCTION IF EXISTS Hello //
+CREATE FUNCTION Hello()
+RETURNS Text not DETERMINISTIC
+
+Begin 
+	DECLARE Hour_N INT;
+	set Hour_N = Hour(now());
+	CASE
+   WHEN Hour_N > 5 and Hour_N <= 12 THEN
+	   RETURN "Доброе утро";
+	WHEN Hour_N > 12 and Hour_N <= 18 THEN
+	   RETURN "Добрый день";
+	WHEN Hour_N > 18 and Hour_N <= 0 THEN
+	   RETURN "Добрый вечер";
+	WHEN Hour_N > 0 and Hour_N <= 6 THEN
+	   RETURN "Доброй ночи";
+	 END Case;
+END//
+
+/*
+ 2. В таблице products есть два текстовых поля: name с названием товара и description с его описанием.
+ Допустимо присутствие обоих полей или одно из них. Ситуация, когда оба поля принимают неопределенное
+  значение NULL неприемлема. Используя триггеры, добейтесь того, чтобы одно из этих полей или оба поля
+   были заполнены. При попытке присвоить полям NULL-значение необходимо отменить операцию.
+ */
+
+CREATE TRIGGER Control BEFORE INSERT on products
+FOR EACH ROW
+BEGIN
+  if new.name is NULL and new.description is NULL Then 
+  SIGNAL SQLSTATE "45000"
+  set Message_text = "Ошибка незаполненного значения";
+END if;
+END;
+
+
+
+
